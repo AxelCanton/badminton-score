@@ -19,6 +19,11 @@ model User {
   sessions      Session[]
   accounts      Account[]
 
+  permissions       UserPermission[]   @relation("UserPermissions")
+  permissionsGranted UserPermission[]  @relation("PermissionsGranted")
+  matchesPlayed     MatchParticipant[] @relation("MatchesPlayed")
+  matchesRecorded   Match[]            @relation("MatchesRecorded")
+
   @@map("user")
 }
 
@@ -68,4 +73,73 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+// --- Domaine badminton ---
+
+/// Droits attribuables compte par compte.
+/// MANAGE_USERS couvre la création de comptes et l'attribution des droits.
+enum Permission {
+  MANAGE_USERS
+  RECORD_MATCH
+}
+
+/// Jointure User <-> Permission. Une ligne = un droit accordé à un compte.
+model UserPermission {
+  id         String     @id @default(uuid())
+  userId     String
+  permission Permission
+  grantedAt  DateTime   @default(now())
+  /// Qui a accordé ce droit. Null pour les droits posés par le seed.
+  grantedById String?
+  user        User  @relation("UserPermissions", fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy   User? @relation("PermissionsGranted", fields: [grantedById], references: [id], onDelete: SetNull)
+
+  @@unique([userId, permission])
+  @@index([userId])
+  @@map("user_permission")
+}
+
+enum MatchFormat {
+  SINGLES
+  DOUBLES
+}
+
+enum Team {
+  A
+  B
+}
+
+/// Un match joué, avec le score final de chaque équipe.
+/// Le vainqueur est l'équipe au score le plus élevé (pas de match nul :
+/// l'égalité est refusée à l'enregistrement).
+model Match {
+  id          String      @id @default(uuid())
+  format      MatchFormat
+  scoreA      Int
+  scoreB      Int
+  playedAt    DateTime
+  createdAt   DateTime    @default(now())
+  /// Traçabilité : qui a saisi ce résultat.
+  recordedById String
+  recordedBy   User               @relation("MatchesRecorded", fields: [recordedById], references: [id])
+  participants MatchParticipant[]
+
+  @@index([playedAt])
+  @@index([recordedById])
+  @@map("match")
+}
+
+/// Participation d'un compte à un match, dans l'équipe A ou B.
+model MatchParticipant {
+  id      String @id @default(uuid())
+  matchId String
+  userId  String
+  team    Team
+  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user    User   @relation("MatchesPlayed", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, userId])
+  @@index([userId])
+  @@map("match_participant")
 }

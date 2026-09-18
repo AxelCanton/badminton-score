@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
 
 import { prisma } from "../lib/prisma";
+import { ALL_PERMISSIONS } from "../lib/permissions";
 
 // Better Auth cherche l'email en minuscules : on normalise dès l'insertion.
 const email = (
@@ -13,11 +14,28 @@ const email = (
 const password = process.env.SEED_USER_PASSWORD ?? "changeme123";
 const name = process.env.SEED_USER_NAME ?? "Admin";
 
+/** Le compte initial doit pouvoir tout faire, sinon l'app est inadministrable. */
+async function grantAllPermissions(userId: string) {
+  await prisma.$transaction(
+    ALL_PERMISSIONS.map((permission) =>
+      prisma.userPermission.upsert({
+        where: { userId_permission: { userId, permission } },
+        // grantedById reste null : ce droit vient du seed, pas d'un admin.
+        create: { userId, permission },
+        update: {},
+      }),
+    ),
+  );
+}
+
 async function main() {
   const existing = await prisma.user.findUnique({ where: { email } });
 
   if (existing) {
-    console.log(`Utilisateur ${email} déjà présent — rien à faire.`);
+    // Le compte peut dater d'avant l'introduction des droits : on les
+    // (re)pose sans toucher au reste.
+    await grantAllPermissions(existing.id);
+    console.log(`Utilisateur ${email} déjà présent — droits complets assurés.`);
     return;
   }
 
@@ -43,6 +61,8 @@ async function main() {
       },
     },
   });
+
+  await grantAllPermissions(userId);
 
   console.log(`Utilisateur créé : ${email} / ${password}`);
 }

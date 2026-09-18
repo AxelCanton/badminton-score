@@ -11,7 +11,7 @@ export function proxy(request: NextRequest) {
   const hasSessionCookie = Boolean(getSessionCookie(request));
   const { pathname } = request.nextUrl;
 
-  if (!hasSessionCookie && pathname.startsWith("/dashboard")) {
+  if (!hasSessionCookie && pathname !== "/login") {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
@@ -23,5 +23,12 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login"],
+  matcher: [
+    "/dashboard/:path*",
+    "/matches/:path*",
+    "/stats/:path*",
+    "/players/:path*",
+    "/admin/:path*",
+    "/login",
+  ],
 };
