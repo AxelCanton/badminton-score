@@ -29,6 +29,7 @@ export const config = {
     "/stats/:path*",
     "/players/:path*",
     "/admin/:path*",
+    "/account/:path*",
     "/login",
   ],
 };

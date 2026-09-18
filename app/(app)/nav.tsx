@@ -45,9 +45,12 @@ export async function Nav({ userName }: { userName: string }) {
       </nav>
 
       <div className="ml-auto flex items-center gap-3">
-        <span className="text-sm text-black/60 dark:text-white/60">
+        <Link
+          href="/account"
+          className="text-sm text-black/60 underline-offset-4 transition-colors hover:text-black hover:underline dark:text-white/60 dark:hover:text-white"
+        >
           {userName}
-        </span>
+        </Link>
         <SignOutButton />
       </div>
     </header>
